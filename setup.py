@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='bulkrename',
-    version='0.1.0',
+    version='0.1.1',
 	author="Claudio D'Onofrio",
     author_email='claudio.donofrio@gmail.com', 
     py_modules=['bulkrename'],
