@@ -56,15 +56,14 @@ def newname(path, execute, suffix):
         # open image and read EXIF data
         try:
             img=Image.open(filename)
-            # do stuff
+            exif_data = img._getexif()
+            origin_ts = exif_data[36867] #key contains original timestamp
+            
         except IOError:
             # filename not an image file            
             click.echo(filename + click.style(' -> ', bg="red") + 'not a valid image format')
             continue
-        
-        exif_data = img._getexif()
-        origin_ts = exif_data[36867] #key contains original timestamp
-        
+                
         # create new name based on date & time
         # yymmddhhss
         new_file_name = origin_ts.replace(':','')
