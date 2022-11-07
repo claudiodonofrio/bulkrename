@@ -59,7 +59,7 @@ def newname(path, execute, suffix):
             exif_data = img._getexif()
             origin_ts = exif_data[36867] #key contains original timestamp
             
-        except IOError:
+        except:
             # filename not an image file            
             click.echo(filename + click.style(' -> ', bg="red") + 'not a valid image format')
             continue
