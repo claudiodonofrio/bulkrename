@@ -10,6 +10,7 @@ from os.path import isfile, join
 from datetime import datetime
 from PIL import Image
 import click
+from tqdm import tqdm
 
 # if you need to map the EXIF codes to a human readable version use:
 # from PIL import ExifTags
@@ -18,21 +19,21 @@ import click
 
 @click.command()
 @click.option('--path','-p', default='.',
-              help='Path to rename images. Default is current directory')
+              help='Path to a folder where you want to rename images. Default is the current directory.')
 @click.option('--execute', '-e', is_flag=True, show_default=True, default=False,
-              help='A preview is created by default. If set, files will be renamed without the possibility of undoing.')
+              help='A preview (dry run) is created by default to standard output. If the script is called with --execute or -e, files will be renamed without the possibility of undoing.')
 @click.option('--suffix', '-s', 
-              help='By default files with suffix png, jpg, tif are read. You can add your extension.')
+              help='By default files with suffix png, jpg, tif are read. Here you can add an additional extension if needed.')
 def newname(path, execute, suffix):
     '''
     This script will rename existing image files based on the creation date
-    found in the meta data of the file'. If the file does already exist, it will
+    found in the meta data of the file. If the file does already exist, it will
     be skipped.
     
     By default a dry run is executed to show the outcome of the script.
-    for a real execution (renaming the files on the server), you need to set
-    the flag --execute. If --execute is set a logfile log.txt is written
-    to the current directory
+    For a real execution (renaming the files on the server), you need to set
+    the flag --execute. If --execute is set, a logfile 'log.txt' is written
+    to the current directory with the performed actions.
     '''
     args = locals()
     
@@ -51,7 +52,7 @@ def newname(path, execute, suffix):
     click.echo(args)
     click.echo('-------------')
     name_dict = {}
-    for filename in images:
+    for filename in tqdm(images):
         # open image and read EXIF data
         try:
             img=Image.open(filename)
