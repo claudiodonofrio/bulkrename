@@ -5,7 +5,8 @@ Created on Sun Nov  6 22:50:09 2022
 @author: Claudio
 """
 import sys
-from os import listdir, rename, replace
+import shutil
+from os import listdir, rename
 from os.path import isfile, join, getmtime, isdir
 from datetime import datetime
 from PIL import Image
@@ -61,9 +62,7 @@ def newname(**kwargs):
     click.echo('configuration: ')
     click.echo(kwargs)
     click.echo('-------------')
-    
-    kwargs['path_out'] = 'asdfasdf'
-    
+        
     if not __sanity__(kwargs):        
         return sys.exit(1)
 
@@ -100,7 +99,7 @@ def newname(**kwargs):
         new_file_name = origin_ts.replace(':','')
         new_file_name = new_file_name.replace(' ','')
         new_file_name = new_file_name[2:12] + filename[-4:] # timestamp + suffix
-        new_file_name = join(kwargs['path_in'], new_file_name)
+        new_file_name = join(kwargs['path_out'], new_file_name)
         name_dict[filename] = new_file_name
         if img:
             img.close()
@@ -121,20 +120,40 @@ def newname(**kwargs):
             logtxt += f'{k} : {v}\n'
         logtxt += f'extensions: {str(extensions)}\n'
         logtxt += '-------------- -----------\n'
+        
+        ''' now we move or copy the files
+            
+        if move = True
+            this is equivalent to rename. If path in and out
+            are the same, the original file is renamed. This can not be undone.
+            You could use the log.txt file to manually reverse.
+        
+        if move = False a copy of the file is created with the new name.
+        
+        for both options, if the the destination files exists already, 
+        it will be skipped.        
+        '''
         for k,v in name_dict.items():
             if isfile(v):
                 click.echo(k + ' -> ' + v + click.style(' -> ', bg="red") + 'skipped, exists')
                 logtxt += f'{k} -> {v} -> skipped, exists\n'                
                 continue
 
-            rename(k, v)
+            if kwargs['move']:
+                rename(k, v)
+            else:                
+                shutil.copy2(k, v)
+            
             click.echo(k + ' -> ' + v + click.style(' -> ok' , bg="green"))
             logtxt += f'{k} -> {v}\n'
 
         logtxt += f'---- end of log ----------- {datetime.now()}\n'
-        log = open("log.txt", "a")
-        log.write(logtxt)
+
+        logfile = join(kwargs['path_out'], 'log.txt')        
+        log = open(logfile, "a")
+        log.write(logtxt)        
         log.close()
+        click.echo(f'log written to: {logfile}')
 
 def __sanity__(args, console=True):
     ''' check for valid entries provided to the main funciton
