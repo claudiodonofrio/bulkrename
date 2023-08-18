@@ -4,9 +4,9 @@ Created on Sun Nov  6 22:50:09 2022
 
 @author: Claudio
 """
-
+import sys
 from os import listdir, rename, replace
-from os.path import isfile, join, getmtime
+from os.path import isfile, join, getmtime, isdir
 from datetime import datetime
 from PIL import Image
 import click
@@ -61,6 +61,11 @@ def newname(**kwargs):
     click.echo('configuration: ')
     click.echo(kwargs)
     click.echo('-------------')
+    
+    kwargs['path_out'] = 'asdfasdf'
+    
+    if not __sanity__(kwargs):        
+        return sys.exit(1)
 
     extensions = ['png', 'jpg', 'tif']
     if kwargs['suffix']:
@@ -71,7 +76,6 @@ def newname(**kwargs):
     # if there are files, remove all which do not have the 'right' extension
     if images:
         images = [i for i in images if i[-3:].lower() in extensions]
-
 
 
     name_dict = {}
@@ -111,26 +115,46 @@ def newname(**kwargs):
                 click.echo(k + ' -> ' + click.style(v, bg="green", fg='black'))
 
     if kwargs['execute']:
-        log = open("log.txt", "a")
-        log.write(f'timestamp:     {datetime.now()}\n')
-        log.write(f'configuration: {str(kwargs)}\n')
-        log.write(f'extensions:    {str(extensions)}\n')
-        log.write('-------------- -----------\n')
+        logtxt = ''
+        logtxt += f'---- start of log --------- {datetime.now()}\n'
+        for k,v in kwargs.items():
+            logtxt += f'{k} : {v}\n'
+        logtxt += f'extensions: {str(extensions)}\n'
+        logtxt += '-------------- -----------\n'
         for k,v in name_dict.items():
             if isfile(v):
                 click.echo(k + ' -> ' + v + click.style(' -> ', bg="red") + 'skipped, exists')
-                log.write(k + ' -> ' + v + ' -> skipped, exists'+'\n')
+                logtxt += f'{k} -> {v} -> skipped, exists\n'                
                 continue
 
             rename(k, v)
             click.echo(k + ' -> ' + v + click.style(' -> ok' , bg="green"))
-            log.write(k + ' -> ' + v + ' -> ok'+'\n')
+            logtxt += f'{k} -> {v}\n'
 
+        logtxt += f'---- end of log ----------- {datetime.now()}\n'
+        log = open("log.txt", "a")
+        log.write(logtxt)
         log.close()
 
+def __sanity__(args, console=True):
+    ''' check for valid entries provided to the main funciton
+        returns TRUE if all checks are valid, otherwise FALSE
+        console = TRUE prints failed tests to standard output
+        console = FALSE, stay quiet        
+    '''
+    
+    sanity = True
+    if not isdir(args['path_in']):
+        sanity = False
+        click.echo(f"{args['path_in']} not found")
+        
+    if not isdir(args['path_out']):
+        sanity = False
+        click.echo(f"{args['path_out']} not found'")
+    
+    return sanity
 
 if __name__ == '__main__':
-#    touch()
     newname()
 
 
