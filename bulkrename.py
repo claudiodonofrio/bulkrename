@@ -29,7 +29,7 @@ quiet = True
 @click.option('--dest','-d', default='.',
               help='Path to a folder where you want to safe the images. Default is the current directory. \n')
 
-@click.option('--move/--copy', default=True,help="""By default move is activated.
+@click.option('--move/--copy', '-m/-c', default=True,help="""By default move is activated.
               Which means if the path to read and output path is the same, a renaming (move) of files
               is performed in place. You can not 'undo' this operation""")
 
