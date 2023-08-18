@@ -19,7 +19,7 @@ from tqdm import tqdm
 # a = ExifTags.TAGS
 
 
-__version__  = '0.1.3'
+__version__  = '0.1.4'
 
 @click.command()
 @click.option('--path_in','-i', default='.',
