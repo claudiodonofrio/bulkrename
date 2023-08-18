@@ -7,7 +7,7 @@ Created on Sun Nov  6 22:50:09 2022
 import sys
 import shutil
 from os import listdir, rename
-from os.path import isfile, join, getmtime, isdir
+from os.path import isfile, join, getmtime, isdir, abspath
 from datetime import datetime
 from PIL import Image
 import click
@@ -20,6 +20,7 @@ from tqdm import tqdm
 
 
 __version__  = '0.1.4'
+verbose = True
 
 @click.command()
 @click.option('--path_in','-i', default='.',
@@ -38,6 +39,13 @@ __version__  = '0.1.4'
 @click.option('--suffix', '-s',
               help='By default files with suffix png, jpg, tif are read. Here you can add an additional extension if needed.')
 
+@click.option('--logfile', '-l', default=True,
+              help='By default a logfile is written to the destinatin folder, if -e --executed is set')
+
+@click.option('--verbose', '-v', is_flag = True, default=True, help='By default actions are written to standard output.')
+#@click.option('--quiet', '-q', is_flag=True, default=False,
+#             help='By default actions are written to standard output.')
+
 @click.version_option(
     version=__version__,
     message=(
@@ -46,7 +54,6 @@ __version__  = '0.1.4'
     ),
 )
 
-#def newname(path_in, path_out, move, execute, suffix):
 def newname(**kwargs):
     '''
     This script will rename existing image files based on the creation date
@@ -59,9 +66,9 @@ def newname(**kwargs):
     to the current directory with the performed actions.
     '''
 
-    click.echo('configuration: ')
-    click.echo(kwargs)
-    click.echo('-------------')
+    global verbose
+    verbose = kwargs['verbose']
+    console('configuration: ' + '\n' + str(kwargs) +'\n' + '-------------')
         
     if not __sanity__(kwargs):        
         return sys.exit(1)
@@ -79,6 +86,10 @@ def newname(**kwargs):
 
     name_dict = {}
     for filename in tqdm(images):
+        
+        #lets deal with absolute filenames, makes the logfile more meaningful
+        
+        filename = abspath(filename)
 
         img = False
         # open image and read EXIF data
@@ -90,9 +101,9 @@ def newname(**kwargs):
         except Exception as e:
             # filename not an image file, revert to modification date
             ts = getmtime(filename)
-            click.echo(e)
+            console(e)
             origin_ts = datetime.fromtimestamp(ts).strftime("%Y%m%d%H%M")
-            click.echo(filename + click.style(' -> ', bg="green") + 'use file modification timestamp')
+            console(filename + click.style(' -> ', bg="green") + 'use file modification timestamp')
 
         # create new name based on date & time
         # yymmddhhss
@@ -100,18 +111,19 @@ def newname(**kwargs):
         new_file_name = new_file_name.replace(' ','')
         new_file_name = new_file_name[2:12] + filename[-4:] # timestamp + suffix
         new_file_name = join(kwargs['path_out'], new_file_name)
+        new_file_name = abspath(new_file_name)        
         name_dict[filename] = new_file_name
         if img:
             img.close()
 
     if not kwargs['execute']:
-        click.echo('dry run')
-        click.echo('-------')
+        console('dry run')
+        console('-------')
         for k,v in name_dict.items():
             if isfile(v):
-                click.echo(k + ' -> ' + v + click.style(' -> ', bg="yellow") + 'skip, exists')
+                console(k + ' -> ' + v + click.style(' -> ', bg="yellow") + 'skip, exists')
             else:
-                click.echo(k + ' -> ' + click.style(v, bg="green", fg='black'))
+                console(k + ' -> ' + click.style(v, bg="green", fg='black'))
 
     if kwargs['execute']:
         logtxt = ''
@@ -135,25 +147,30 @@ def newname(**kwargs):
         '''
         for k,v in name_dict.items():
             if isfile(v):
-                click.echo(k + ' -> ' + v + click.style(' -> ', bg="red") + 'skipped, exists')
+                console(k + ' -> ' + v + click.style(' -> ', bg="red") + 'skipped, exists')
                 logtxt += f'{k} -> {v} -> skipped, exists\n'                
                 continue
 
             if kwargs['move']:
-                rename(k, v)
+                shutil.move(k, v)
             else:                
                 shutil.copy2(k, v)
             
-            click.echo(k + ' -> ' + v + click.style(' -> ok' , bg="green"))
+            console(k + ' -> ' + v + click.style(' -> ok' , bg="green"))
             logtxt += f'{k} -> {v}\n'
 
         logtxt += f'---- end of log ----------- {datetime.now()}\n'
+        write_log(logtxt, join(kwargs['path_out'], 'log.txt'))
 
-        logfile = join(kwargs['path_out'], 'log.txt')        
+def console(msg=None):    
+    if verbose:
+        click.secho(msg)
+
+def write_log(logtxt, logfile):        
         log = open(logfile, "a")
         log.write(logtxt)        
         log.close()
-        click.echo(f'log written to: {logfile}')
+        console(f'log written to: {logfile}')
 
 def __sanity__(args, console=True):
     ''' check for valid entries provided to the main funciton
@@ -165,11 +182,11 @@ def __sanity__(args, console=True):
     sanity = True
     if not isdir(args['path_in']):
         sanity = False
-        click.echo(f"{args['path_in']} not found")
+        console(f"{args['path_in']} not found")
         
     if not isdir(args['path_out']):
         sanity = False
-        click.echo(f"{args['path_out']} not found'")
+        console(f"{args['path_out']} not found'")
     
     return sanity
 
