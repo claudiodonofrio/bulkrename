@@ -6,7 +6,7 @@ Created on Sun Nov  6 22:50:09 2022
 """
 import sys
 import shutil
-from os import listdir, rename
+from os import listdir
 from os.path import isfile, join, getmtime, isdir, abspath
 from datetime import datetime
 from PIL import Image
@@ -20,13 +20,13 @@ from tqdm import tqdm
 
 
 __version__  = '0.1.4'
-verbose = True
+quiet = True
 
-@click.command()
-@click.option('--path_in','-i', default='.',
+@click.command(add_help_option=True, no_args_is_help=True, hidden=False, deprecated=False)
+@click.option('--src','-s', default='.',
               help='Path to a folder where you want to read images. Default is the current directory.')
 
-@click.option('--path_out','-o', default='.',
+@click.option('--dest','-d', default='.',
               help='Path to a folder where you want to safe the images. Default is the current directory. \n')
 
 @click.option('--move/--copy', default=True,help="""By default move is activated.
@@ -36,15 +36,13 @@ verbose = True
 @click.option('--execute', '-e', is_flag=True, show_default=True, default=False,
               help='A preview (dry run) is created by default to standard output. If the script is called with --execute or -e, files will be renamed without the possibility of undoing.')
 
-@click.option('--suffix', '-s',
+@click.option('--suffix', '-x',
               help='By default files with suffix png, jpg, tif are read. Here you can add an additional extension if needed.')
 
-@click.option('--logfile', '-l', default=True,
-              help='By default a logfile is written to the destinatin folder, if -e --executed is set')
+@click.option('--nologfile', '-n', is_flag=True, show_default=True, default=False,
+              help='By default a logfile is written to the destination folder, if -e --executed is set')
 
-@click.option('--verbose', '-v', is_flag = True, default=True, help='By default actions are written to standard output.')
-#@click.option('--quiet', '-q', is_flag=True, default=False,
-#             help='By default actions are written to standard output.')
+@click.option('--quiet', '-q', is_flag = True, default=True, help='By default actions are written to standard output. You can keep the script quiet by providing -1')
 
 @click.version_option(
     version=__version__,
@@ -57,17 +55,31 @@ verbose = True
 def newname(**kwargs):
     '''
     This script will rename existing image files based on the creation date
-    found in the meta data of the file. If the file does already exist, it will
-    be skipped.
+    found in the meta data of the file. 
+    
+    You can provide an additional suffix, for files you would like to rename
+    to complement existing the existing list of png, jpg, tif. If any of the 
+    files do not contain metadata, the script will use the modification date
+    for the new name.
 
     By default a dry run is executed to show the outcome of the script.
     For a real execution (renaming the files on the server), you need to set
     the flag --execute. If --execute is set, a logfile 'log.txt' is written
-    to the current directory with the performed actions.
+    to the destination directory with the performed actions.
+    
+    \n
+    The simplest command would be to have a dry run to rename all images in the current folder    
+    \n
+    bulkrename -s . -d .
+         
+    \n
+    if you want to execute to command for real, you MUST provide the execution flag    
+    \n
+    bulkrename --execute -src . -dest .
     '''
 
-    global verbose
-    verbose = kwargs['verbose']
+    global quiet
+    quiet = kwargs['quiet']
     console('configuration: ' + '\n' + str(kwargs) +'\n' + '-------------')
         
     if not __sanity__(kwargs):        
@@ -77,7 +89,7 @@ def newname(**kwargs):
     if kwargs['suffix']:
         extensions.append(kwargs['suffix'].lower())
 
-    images = [join(kwargs['path_in'], f) for f in listdir(kwargs['path_in']) if isfile(join(kwargs['path_in'], f))]
+    images = [join(kwargs['src'], f) for f in listdir(kwargs['src']) if isfile(join(kwargs['src'], f))]
 
     # if there are files, remove all which do not have the 'right' extension
     if images:
@@ -110,7 +122,7 @@ def newname(**kwargs):
         new_file_name = origin_ts.replace(':','')
         new_file_name = new_file_name.replace(' ','')
         new_file_name = new_file_name[2:12] + filename[-4:] # timestamp + suffix
-        new_file_name = join(kwargs['path_out'], new_file_name)
+        new_file_name = join(kwargs['dest'], new_file_name)
         new_file_name = abspath(new_file_name)        
         name_dict[filename] = new_file_name
         if img:
@@ -160,13 +172,15 @@ def newname(**kwargs):
             logtxt += f'{k} -> {v}\n'
 
         logtxt += f'---- end of log ----------- {datetime.now()}\n'
-        write_log(logtxt, join(kwargs['path_out'], 'log.txt'))
+        write_log(logtxt, kwargs)
 
 def console(msg=None):    
-    if verbose:
+    if quiet:
         click.secho(msg)
 
-def write_log(logtxt, logfile):        
+def write_log(logtxt, kwargs):
+    if not kwargs['nologfile']:
+        logfile = join(kwargs['dest'], 'log.txt')     
         log = open(logfile, "a")
         log.write(logtxt)        
         log.close()
@@ -180,13 +194,13 @@ def __sanity__(args, console=True):
     '''
     
     sanity = True
-    if not isdir(args['path_in']):
+    if not isdir(args['src']):
         sanity = False
-        console(f"{args['path_in']} not found")
+        console(f"{args['src']} not found")
         
-    if not isdir(args['path_out']):
+    if not isdir(args['dest']):
         sanity = False
-        console(f"{args['path_out']} not found'")
+        console(f"{args['dest']} not found'")
     
     return sanity
 
