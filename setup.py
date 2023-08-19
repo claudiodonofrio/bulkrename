@@ -1,8 +1,10 @@
 from setuptools import setup
+import bulkrename
+
 
 setup(
     name='bulkrename',
-    version='0.1.1',
+    version=bulkrename.__version__,
 	author="Claudio D'Onofrio",
     author_email='claudio.donofrio@gmail.com', 
     py_modules=['bulkrename'],
