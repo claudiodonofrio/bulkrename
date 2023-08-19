@@ -22,7 +22,7 @@ from tqdm import tqdm
 __version__  = '0.1.4'
 quiet = True
 
-@click.command(add_help_option=True, no_args_is_help=True, hidden=False, deprecated=False)
+@click.command(add_help_option=True, no_args_is_help=False, hidden=False, deprecated=False)
 @click.option('--src','-s', default='.',
               help='Path to a folder where you want to read images. Default is the current directory.')
 
@@ -40,9 +40,9 @@ quiet = True
               help='By default files with suffix png, jpg, tif are read. Here you can add an additional extension if needed.')
 
 @click.option('--nologfile', '-n', is_flag=True, show_default=True, default=False,
-              help='By default a logfile is written to the destination folder, if -e --executed is set')
+              help='By default a logfile is written to the destination folder (--src, -s), if -e --executed is set')
 
-@click.option('--quiet', '-q', is_flag = True, default=True, help='By default actions are written to standard output. You can keep the script quiet by providing -1')
+@click.option('--quiet', '-q', is_flag = True, default=False, help='By default actions are written to standard output.')
 
 @click.version_option(
     version=__version__,
@@ -80,7 +80,11 @@ def newname(**kwargs):
 
     global quiet
     quiet = kwargs['quiet']
-    console('configuration: ' + '\n' + str(kwargs) +'\n' + '-------------')
+    console('configuration:')
+    for k,v in kwargs.items():
+        console(f'{k} : {v}')
+    console('-------------')
+    
         
     if not __sanity__(kwargs):        
         return sys.exit(1)
@@ -111,7 +115,7 @@ def newname(**kwargs):
             origin_ts = exif_data[36867] #key contains original timestamp
 
         except Exception as e:
-            # filename not an image file, revert to modification date
+            # filename not an image file, revert to modification date, but            
             ts = getmtime(filename)
             console(e)
             origin_ts = datetime.fromtimestamp(ts).strftime("%Y%m%d%H%M")
@@ -129,7 +133,7 @@ def newname(**kwargs):
             img.close()
 
     if not kwargs['execute']:
-        console('dry run')
+        console(click.style('dry run',bg="green") + ', set --execute to process the files')
         console('-------')
         for k,v in name_dict.items():
             if isfile(v):
@@ -138,6 +142,7 @@ def newname(**kwargs):
                 console(k + ' -> ' + click.style(v, bg="green", fg='black'))
 
     if kwargs['execute']:
+        console(click.style('execution started',bg="green"))
         logtxt = ''
         logtxt += f'---- start of log --------- {datetime.now()}\n'
         for k,v in kwargs.items():
@@ -175,7 +180,7 @@ def newname(**kwargs):
         write_log(logtxt, kwargs)
 
 def console(msg=None):    
-    if quiet:
+    if not quiet:
         click.secho(msg)
 
 def write_log(logtxt, kwargs):
